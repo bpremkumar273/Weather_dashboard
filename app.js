@@ -644,7 +644,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Build leaflet map DOM node
     leafletMap = L.map('leaflet-weather-map', {
-      zoomControl: false
+      zoomControl: false,
+      scrollWheelZoom: false
     }).setView([lat, lon], 11);
 
     // Standard OpenStreetMap base map tile layer
