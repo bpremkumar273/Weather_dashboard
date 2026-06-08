@@ -657,6 +657,36 @@ document.addEventListener("DOMContentLoaded", () => {
     // Zoom controls customized positioning
     L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
 
+    // Create and append a "Ctrl/Cmd + scroll to zoom" overlay
+    const mapContainer = document.getElementById('leaflet-weather-map');
+    const overlay = document.createElement('div');
+    overlay.className = 'map-scroll-instruction-overlay';
+    overlay.innerHTML = '<span class="scroll-instruction-text">Use ⌘ + scroll to zoom the map</span>';
+    mapContainer.appendChild(overlay);
+
+    let scrollTimeout = null;
+
+    mapContainer.addEventListener('wheel', (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const keyText = isMac ? '⌘ (Cmd)' : 'Ctrl';
+      overlay.querySelector('.scroll-instruction-text').textContent = `Use ${keyText} + scroll to zoom the map`;
+
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        leafletMap.scrollWheelZoom.enable();
+        overlay.classList.remove('visible');
+      } else {
+        leafletMap.scrollWheelZoom.disable();
+        // Show the overlay to guide the user
+        overlay.classList.add('visible');
+        
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          overlay.classList.remove('visible');
+        }, 1200);
+      }
+    }, { passive: false });
+
     // Drop custom pin on map click
     leafletMap.on('click', async function(e) {
       const { lat, lng } = e.latlng;
