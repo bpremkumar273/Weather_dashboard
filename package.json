@@ -1,0 +1,24 @@
+{
+  "name": "aero-weather-dashboard",
+  "version": "1.0.0",
+  "description": "Aero - Premium, real-time weather intelligence dashboard",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npx http-server -p 5173"
+  },
+  "keywords": [
+    "weather",
+    "dashboard",
+    "glassmorphism",
+    "leaflet",
+    "chartjs"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AERO | Advanced Weather Analytics & Forecast Dashboard</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Aero is a premium, real-time weather intelligence dashboard featuring dynamic glassmorphic interfaces, interactive forecasting charts, live geographical maps, and micro-metric weather observations.">
+  <meta name="keywords" content="weather, dashboard, analytics, dynamic, forecast, mapping, real-time, meteorology">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Local Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="dark-theme">
+  
+  <!-- Dynamic Atmospheric Background Effects -->
+  <div class="sky-backdrop" id="sky-backdrop">
+    <div class="ambient-glow" id="ambient-glow"></div>
+    <div class="cloud-layer" id="cloud-layer"></div>
+    <canvas id="weather-particles"></canvas>
+  </div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="logo-icon">
+            <i data-lucide="wind"></i>
+          </div>
+          <span class="brand-name">Aero</span>
+        </div>
+        <button class="mobile-close-btn" id="mobile-sidebar-close" aria-label="Close sidebar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Main Console</div>
+        <a href="#" class="nav-item active" id="nav-dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-manage-locations">
+          <i data-lucide="map-pin"></i>
+          <span>Favorites</span>
+          <span class="badge" id="favorites-count">4</span>
+        </a>
+        
+        <div class="nav-section-label">Saved Locations</div>
+        <div class="favorites-list" id="sidebar-favorites-list">
+          <!-- Dynamic favorites go here -->
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="nav-item footer-action" id="settings-trigger">
+          <i data-lucide="settings"></i>
+          <span>System Settings</span>
+        </button>
+        <div class="credit">
+          <p>Aero Weather Engine v2.5</p>
+          <span>Production Build</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Header Navigation -->
+      <header class="app-header">
+        <div class="header-left">
+          <button class="menu-hamburger-btn" id="sidebar-toggle" aria-label="Open navigation sidebar">
+            <i data-lucide="menu"></i>
+          </button>
+          
+          <!-- Search Bar Container -->
+          <div class="search-container">
+            <div class="search-input-wrapper">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="search-input" placeholder="Search cities (e.g. Tokyo, Paris...)" autocomplete="off">
+              <button class="clear-search-btn" id="search-clear" style="display: none;">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <!-- Search Suggestions Dropdown -->
+            <div class="search-dropdown" id="search-suggestions-dropdown">
+              <!-- Dynamically populated suggestions -->
+            </div>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Dynamic Local Date-Time Clock -->
+          <div class="clock-display">
+            <span id="local-date">June 8, 2026</span>
+            <span class="clock-divider">|</span>
+            <span id="local-time" class="time-digit">13:14</span>
+          </div>
+
+          <!-- Unit Selector Switcher -->
+          <div class="unit-toggle-container">
+            <span class="unit-label">°C</span>
+            <label class="switch-toggle">
+              <input type="checkbox" id="unit-switch-checkbox">
+              <span class="slider-round"></span>
+            </label>
+            <span class="unit-label">°F</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Active Alerts Ticker (Hidden by default, shown if severe warnings exist) -->
+      <div class="alerts-ticker-bar" id="alerts-ticker-container" style="display: none;">
+        <div class="ticker-content">
+          <i data-lucide="alert-triangle" class="ticker-warning-icon"></i>
+          <span class="ticker-text" id="alerts-ticker-text">Warning: Severe storm conditions approaching this region.</span>
+          <button class="ticker-details-btn" id="alerts-ticker-details-btn">View Advisory</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Dashboard Workspace -->
+      <div class="dashboard-scroll-body">
+        
+        <!-- Primary Grid Layout -->
+        <div class="dashboard-grid">
+          
+          <!-- Primary Weather Card -->
+          <div class="card card-primary-weather animated-card" id="card-primary-weather">
+            <div class="card-glow-overlay"></div>
+            <div class="primary-header">
+              <div class="location-details">
+                <h1 id="weather-city-name" class="city-title">Loading...</h1>
+                <span id="weather-country-name" class="country-tag">Loading...</span>
+              </div>
+              <button class="favorite-toggle-btn" id="favorite-toggle-btn" aria-label="Pin location to favorites">
+                <i data-lucide="star" class="fav-icon"></i>
+              </button>
+            </div>
+
+            <div class="primary-body">
+              <div class="temp-section">
+                <div class="current-temp-wrapper">
+                  <span id="weather-current-temp" class="large-temp">--</span>
+                  <span class="large-unit" id="weather-current-unit">°C</span>
+                </div>
+                <div class="condition-badge">
+                  <div class="condition-icon" id="weather-primary-icon">
+                    <!-- Dynamic weather icon -->
+                  </div>
+                  <span id="weather-description" class="condition-text">Connecting...</span>
+                </div>
+              </div>
+              
+              <div class="temp-ranges">
+                <div class="range-pill">
+                  <i data-lucide="arrow-down" class="range-icon min-icon"></i>
+                  <span>Min: <b id="weather-temp-min">--</b></span>
+                </div>
+                <div class="range-pill">
+                  <i data-lucide="arrow-up" class="range-icon max-icon"></i>
+                  <span>Max: <b id="weather-temp-max">--</b></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="primary-footer">
+              <div class="footer-stat">
+                <span class="stat-label">Feels Like</span>
+                <span class="stat-value" id="weather-feels-like">--</span>
+              </div>
+              <div class="footer-stat">
+                <span class="stat-label">Humidity</span>
+                <span class="stat-value" id="weather-humidity">--</span>
+              </div>
+              <div class="footer-stat">
+                <span class="stat-label">Wind</span>
+                <span class="stat-value" id="weather-wind">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Forecast Chart Widget -->
+          <div class="card card-chart animated-card double-width" id="card-chart">
+            <div class="card-header-actions">
+              <h2 class="card-title">Hourly Forecast Trend</h2>
+              <div class="chart-tab-group">
+                <button class="chart-tab active" id="chart-tab-temp">Temperature</button>
+                <button class="chart-tab" id="chart-tab-rain">Precipitation</button>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="hourly-forecast-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- 7-Day Forecast Sidebar List -->
+          <div class="card card-weekly-forecast animated-card tall-card" id="card-weekly-forecast">
+            <h2 class="card-title">7-Day Forecast</h2>
+            <div class="weekly-list" id="weekly-forecast-list">
+              <!-- Dynamically populated 7 days -->
+            </div>
+          </div>
+
+          <!-- Weather Observations Metrics Grid -->
+          <div class="card card-metric animated-card" id="card-metric-wind">
+            <h2 class="card-title">Wind Performance</h2>
+            <div class="wind-widget-body">
+              <div class="compass-container">
+                <div class="compass-dial">
+                  <span class="compass-label north">N</span>
+                  <span class="compass-label east">E</span>
+                  <span class="compass-label south">S</span>
+                  <span class="compass-label west">W</span>
+                  <div class="compass-needle" id="wind-compass-needle"></div>
+                </div>
+              </div>
+              <div class="wind-info">
+                <div class="wind-main-value">
+                  <span id="wind-metric-val">0</span>
+                  <span class="wind-metric-unit" id="wind-metric-unit">km/h</span>
+                </div>
+                <div class="wind-sub-info">
+                  <span class="info-label">Direction</span>
+                  <span class="info-value" id="wind-metric-dir">North (0°)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- UV Index Card -->
+          <div class="card card-metric animated-card" id="card-metric-uv">
+            <h2 class="card-title">UV Index</h2>
+            <div class="uv-widget-body">
+              <div class="uv-gauge-wrapper">
+                <div class="uv-gauge-value" id="uv-metric-val">0</div>
+                <span class="uv-gauge-level" id="uv-metric-level">Low</span>
+              </div>
+              <div class="uv-range-slider-container">
+                <div class="uv-range-track">
+                  <div class="uv-range-indicator" id="uv-metric-indicator" style="left: 0%;"></div>
+                </div>
+                <div class="uv-range-labels">
+                  <span>0</span><span>2</span><span>5</span><span>7</span><span>10</span><span>11+</span>
+                </div>
+              </div>
+              <p class="uv-description" id="uv-metric-desc">Safe levels. Protection not required.</p>
+            </div>
+          </div>
+
+          <!-- Sunrise & Sunset Arc Card -->
+          <div class="card card-metric animated-card" id="card-metric-sun">
+            <h2 class="card-title">Solar Position</h2>
+            <div class="sun-widget-body">
+              <div class="sun-arc-container">
+                <!-- Semicircle SVG path for sun trajectory -->
+                <svg viewBox="0 0 100 50" class="sun-arc-svg">
+                  <path d="M 5,45 A 40,40 0 0,1 95,45" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" stroke-dasharray="3,3" />
+                  <path id="sun-arc-progress" d="M 5,45 A 40,40 0 0,1 95,45" fill="none" stroke="var(--accent-glow)" stroke-width="2" stroke-dasharray="283" stroke-dashoffset="283" />
+                </svg>
+                <div class="sun-position-dot" id="sun-arc-position-dot">
+                  <i data-lucide="sun" class="floating-sun-icon"></i>
+                </div>
+                <div class="sun-times-row">
+                  <div class="time-marker">
+                    <i data-lucide="sunrise" class="solar-icon"></i>
+                    <span id="sun-sunrise-val">--:--</span>
+                  </div>
+                  <div class="time-marker text-right">
+                    <i data-lucide="sunset" class="solar-icon"></i>
+                    <span id="sun-sunset-val">--:--</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sun-remaining-time" id="sun-solar-message">-- hours of daylight remaining</div>
+            </div>
+          </div>
+
+          <!-- Air Quality Index Card -->
+          <div class="card card-metric animated-card" id="card-metric-aqi">
+            <h2 class="card-title">Air Quality Index</h2>
+            <div class="aqi-widget-body">
+              <div class="aqi-heading">
+                <span class="aqi-badge-score" id="aqi-badge-val">-</span>
+                <div class="aqi-meta">
+                  <span class="aqi-title-text" id="aqi-title-val">Unknown</span>
+                  <span class="aqi-health-desc" id="aqi-health-val">Updating air conditions...</span>
+                </div>
+              </div>
+              <div class="aqi-linear-gauge">
+                <div class="aqi-dot-cursor" id="aqi-metric-cursor" style="left: 0%;"></div>
+                <div class="aqi-bar-gradient"></div>
+              </div>
+              <p class="aqi-recommendation" id="aqi-metric-advice">Please wait, loading local meteorological atmosphere index...</p>
+            </div>
+          </div>
+
+          <!-- Secondary Observation Grid Item (Visibility, Pressure, Rain Chance) -->
+          <div class="card card-observation-grid animated-card" id="card-observations">
+            <div class="obs-row">
+              <div class="obs-item">
+                <div class="obs-icon-circle"><i data-lucide="eye"></i></div>
+                <div class="obs-text">
+                  <span class="obs-label">Visibility</span>
+                  <span class="obs-val" id="obs-visibility-val">--</span>
+                </div>
+              </div>
+              <div class="obs-item">
+                <div class="obs-icon-circle"><i data-lucide="gauge"></i></div>
+                <div class="obs-text">
+                  <span class="obs-label">Barometer</span>
+                  <span class="obs-val" id="obs-pressure-val">--</span>
+                </div>
+              </div>
+            </div>
+            <div class="obs-row divider-top">
+              <div class="obs-item">
+                <div class="obs-icon-circle"><i data-lucide="droplet"></i></div>
+                <div class="obs-text">
+                  <span class="obs-label">Humidity</span>
+                  <span class="obs-val" id="obs-humidity-val">--</span>
+                </div>
+              </div>
+              <div class="obs-item">
+                <div class="obs-icon-circle"><i data-lucide="cloud-rain"></i></div>
+                <div class="obs-text">
+                  <span class="obs-label">Rain Chance</span>
+                  <span class="obs-val" id="obs-rain-chance-val">--</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leaflet Interactive Geographic Card -->
+          <div class="card card-map animated-card double-width" id="card-map">
+            <h2 class="card-title">Geographic Weather Map</h2>
+            <div class="map-controls">
+              <span class="coordinates-tag" id="map-coordinates-label">Coords: 0°N, 0°E</span>
+              <div class="map-layer-selector">
+                <button class="map-tab active" id="map-tab-standard">Standard Map</button>
+                <button class="map-tab" id="map-tab-satellite">Precipitation Grid</button>
+              </div>
+            </div>
+            <div class="map-render-area" id="leaflet-weather-map"></div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Settings Console Modal Overlay -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Dashboard Configurations</h2>
+        <button class="modal-close-btn" id="settings-close-btn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <div class="settings-group">
+          <label class="settings-label" for="setting-api-key">OpenWeatherMap API Token</label>
+          <input type="password" id="setting-api-key" placeholder="Enter API Key to fetch live meteorological data">
+          <p class="settings-help">Leave this blank to experience high-fidelity geographic atmospheric simulation. No credit card required.</p>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">Aesthetic Interface Style</label>
+          <div class="theme-selection-grid">
+            <button class="theme-btn active" id="theme-btn-dark">Dark Minimalist</button>
+            <button class="theme-btn" id="theme-btn-light">Glass Light</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label" for="setting-blur-intensity">Glassmorphic Blur Intensity: <span id="blur-intensity-val">15px</span></label>
+          <input type="range" id="setting-blur-intensity" min="0" max="30" value="15">
+        </div>
+
+        <div class="settings-group inline-toggle">
+          <div>
+            <label class="settings-label">Background Particle Simulations</label>
+            <p class="settings-help">Runs weather simulation canvas loops (rain/snow/rays) corresponding to weather states.</p>
+          </div>
+          <label class="switch-toggle">
+            <input type="checkbox" id="setting-particles-toggle" checked>
+            <span class="slider-round"></span>
+          </label>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="settings-reset-btn">Reset Defaults</button>
+        <button class="btn btn-primary" id="settings-save-btn">Apply Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Details Modal Overlay -->
+  <div class="modal-overlay" id="alerts-modal" style="display: none;">
+    <div class="modal-card alert-modal-type">
+      <div class="modal-header">
+        <div class="alert-header-title">
+          <i data-lucide="alert-triangle" class="alert-modal-warning-icon"></i>
+          <h2 id="alert-modal-title">Weather Warning Alert</h2>
+        </div>
+        <button class="modal-close-btn" id="alerts-close-btn" aria-label="Close alert modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="alert-metadata-row">
+          <div>
+            <span class="alert-meta-label">Issued By:</span>
+            <span class="alert-meta-val" id="alert-modal-sender">Meteorological Center</span>
+          </div>
+          <div>
+            <span class="alert-meta-label">Duration:</span>
+            <span class="alert-meta-val" id="alert-modal-time">Active</span>
+          </div>
+        </div>
+        <div class="alert-description-box">
+          <p id="alert-modal-description">Severe weather warning detail placeholder text.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="alerts-modal-dismiss-btn">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Favorites Manager Modal Overlay -->
+  <div class="modal-overlay" id="favorites-manager-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>Pin Locations Manager</h2>
+        <button class="modal-close-btn" id="fav-mgr-close-btn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="settings-help">Save locations for immediate access from the side navigation. Click to search and pin.</p>
+        
+        <div class="favorites-mgr-grid" id="favorites-mgr-list">
+          <!-- Dynamic favorites manage list -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="fav-mgr-done-btn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart.js and Leaflet JS Scripts via CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Local Script Bundles -->
+  <script src="cities.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
