@@ -75,6 +75,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const mapTabStandard = document.getElementById("map-tab-standard");
   const mapTabPrecipitation = document.getElementById("map-tab-satellite");
 
+  // Map Search Bindings
+  const mapSearchInput = document.getElementById("map-search-input");
+  const mapSearchClear = document.getElementById("map-search-clear");
+  const mapSearchSuggestions = document.getElementById("map-search-suggestions");
+
   // Favorite toggle on current weather card
   const favoriteToggleBtn = document.getElementById("favorite-toggle-btn");
 
@@ -591,6 +596,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Zoom controls customized positioning
     L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
+
+    // Drop custom pin on map click
+    leafletMap.on('click', async function(e) {
+      const { lat, lng } = e.latlng;
+      const customLocation = {
+        name: `Pin (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
+        lat: lat,
+        lon: lng,
+        country: "Custom Pin",
+        timezone: Math.round(lng / 15) // Approximate timezone
+      };
+      currentCity = customLocation;
+      await loadWeatherForCity(customLocation);
+    });
   }
 
   // ==========================================================================
@@ -656,6 +675,88 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
       searchSuggestions.style.display = "none";
     }
+    if (!mapSearchInput.contains(e.target) && !mapSearchSuggestions.contains(e.target)) {
+      mapSearchSuggestions.style.display = "none";
+    }
+  });
+
+  // ==========================================================================
+  // MAP SEARCH AUTOCOMPLETE (NOMINATIM API)
+  // ==========================================================================
+  let mapSearchTimeout = null;
+
+  mapSearchInput.addEventListener("input", () => {
+    const val = mapSearchInput.value.trim();
+    
+    if (val.length === 0) {
+      mapSearchSuggestions.style.display = "none";
+      mapSearchClear.style.display = "none";
+      return;
+    }
+
+    mapSearchClear.style.display = "block";
+
+    if (mapSearchTimeout) {
+      clearTimeout(mapSearchTimeout);
+    }
+
+    mapSearchTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=5`);
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          mapSearchSuggestions.innerHTML = "";
+          data.forEach(item => {
+            const parts = item.display_name.split(',');
+            const title = parts[0].trim();
+            const sub = parts.slice(1).join(',').trim();
+            
+            const div = document.createElement("div");
+            div.className = "map-suggestion-item";
+            div.innerHTML = `
+              <span class="map-suggestion-title">${title}</span>
+              <span class="map-suggestion-sub">${sub}</span>
+            `;
+            
+            div.addEventListener("click", () => {
+              const lat = parseFloat(item.lat);
+              const lon = parseFloat(item.lon);
+              
+              const customLoc = {
+                name: title,
+                lat: lat,
+                lon: lon,
+                country: parts[parts.length - 1]?.trim() || "Search Pin",
+                timezone: Math.round(lon / 15)
+              };
+              
+              currentCity = customLoc;
+              loadWeatherForCity(customLoc);
+              
+              // Clear map search input
+              mapSearchInput.value = "";
+              mapSearchSuggestions.style.display = "none";
+              mapSearchClear.style.display = "none";
+            });
+            
+            mapSearchSuggestions.appendChild(div);
+          });
+          mapSearchSuggestions.style.display = "block";
+        } else {
+          mapSearchSuggestions.style.display = "none";
+        }
+      } catch (err) {
+        console.warn("Error fetching address suggestions from Nominatim", err);
+      }
+    }, 400); // 400ms debounce
+  });
+
+  mapSearchClear.addEventListener("click", () => {
+    mapSearchInput.value = "";
+    mapSearchSuggestions.style.display = "none";
+    mapSearchClear.style.display = "none";
   });
 
   // ==========================================================================

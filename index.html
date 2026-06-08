@@ -347,9 +347,22 @@
           </div>
 
           <!-- Leaflet Interactive Geographic Card -->
-          <div class="card card-map animated-card double-width" id="card-map">
-            <h2 class="card-title">Geographic Weather Map</h2>
+          <div class="card card-map animated-card" id="card-map">
+            <h2 class="card-title">Geographic Weather Map <span style="font-size: 10px; text-transform: none; color: var(--text-muted); font-weight: normal; margin-left: 10px;">Click map to pin any location</span></h2>
             <div class="map-controls">
+              <!-- Google Maps style Search Bar -->
+              <div class="map-search-container">
+                <div class="map-search-input-wrapper">
+                  <i data-lucide="search" class="map-search-icon"></i>
+                  <input type="text" id="map-search-input" placeholder="Search map location..." autocomplete="off">
+                  <button class="map-search-clear-btn" id="map-search-clear" style="display: none;" aria-label="Clear map search">
+                    <i data-lucide="x"></i>
+                  </button>
+                </div>
+                <div class="map-search-dropdown" id="map-search-suggestions">
+                  <!-- Suggestions will load here -->
+                </div>
+              </div>
               <span class="coordinates-tag" id="map-coordinates-label">Coords: 0°N, 0°E</span>
               <div class="map-layer-selector">
                 <button class="map-tab active" id="map-tab-standard">Standard Map</button>
