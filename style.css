@@ -758,7 +758,7 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 340px;
+  min-height: 300px;
 }
 
 .card-glow-overlay {
@@ -932,6 +932,10 @@ a {
 /* ==========================================================================
    CHARTS & FORECAST LAYOUTS
    ========================================================================== */
+
+.card-chart {
+  height: 300px;
+}
 
 .card-header-actions {
   display: flex;
