@@ -265,9 +265,23 @@ document.addEventListener("DOMContentLoaded", () => {
         mapMarker.setLatLng([data.lat, data.lon]);
         mapMarker.setPopupContent(`<b>${data.city}</b><br>${data.current.temp}${tempUnit}, ${data.current.description}`);
       } else {
-        mapMarker = L.marker([data.lat, data.lon]).addTo(leafletMap)
-          .bindPopup(`<b>${data.city}</b><br>${data.current.temp}${tempUnit}, ${data.current.description}`).openPopup();
+        mapMarker = L.marker([data.lat, data.lon], { draggable: true }).addTo(leafletMap)
+          .bindPopup(`<b>${data.city}</b><br>${data.current.temp}${tempUnit}, ${data.current.description}`);
+
+        mapMarker.on('dragend', async function() {
+          const pos = mapMarker.getLatLng();
+          const customLocation = {
+            name: `Pin (${pos.lat.toFixed(3)}, ${pos.lng.toFixed(3)})`,
+            lat: pos.lat,
+            lon: pos.lng,
+            country: "Dragged Pin",
+            timezone: Math.round(pos.lng / 15)
+          };
+          currentCity = customLocation;
+          await loadWeatherForCity(customLocation);
+        });
       }
+      mapMarker.openPopup();
       
       document.getElementById("map-coordinates-label").textContent = `Coords: ${data.lat.toFixed(4)}°N, ${data.lon.toFixed(4)}°E`;
     }
