@@ -657,35 +657,41 @@ document.addEventListener("DOMContentLoaded", () => {
     // Zoom controls customized positioning
     L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
 
-    // Create and append a "Ctrl/Cmd + scroll to zoom" overlay
+    // Set scrollWheelZoom to false initially
+    leafletMap.scrollWheelZoom.disable();
+
     const mapContainer = document.getElementById('leaflet-weather-map');
-    const overlay = document.createElement('div');
-    overlay.className = 'map-scroll-instruction-overlay';
-    overlay.innerHTML = '<span class="scroll-instruction-text">Use ⌘ + scroll to zoom the map</span>';
-    mapContainer.appendChild(overlay);
+    const mapCard = document.getElementById('card-map');
+    
+    // Create status indicator badge
+    const badge = document.createElement('div');
+    badge.className = 'map-interaction-status-badge';
+    badge.innerHTML = '<span class="status-dot"></span><span class="status-text">Click Map to Zoom & Pan</span>';
+    mapCard.appendChild(badge);
 
-    let scrollTimeout = null;
+    // Click map to activate scroll zoom
+    mapContainer.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent document click from immediately deactivating
+      leafletMap.scrollWheelZoom.enable();
+      mapCard.classList.add('map-focused');
+      badge.innerHTML = '<span class="status-dot active"></span><span class="status-text active">Map Active (Scroll to Zoom)</span>';
+    });
 
-    mapContainer.addEventListener('wheel', (e) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const keyText = isMac ? '⌘ (Cmd)' : 'Ctrl';
-      overlay.querySelector('.scroll-instruction-text').textContent = `Use ${keyText} + scroll to zoom the map`;
-
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        leafletMap.scrollWheelZoom.enable();
-        overlay.classList.remove('visible');
-      } else {
+    // Click outside map card to deactivate
+    document.addEventListener('click', (e) => {
+      if (!mapCard.contains(e.target)) {
         leafletMap.scrollWheelZoom.disable();
-        // Show the overlay to guide the user
-        overlay.classList.add('visible');
-        
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          overlay.classList.remove('visible');
-        }, 1200);
+        mapCard.classList.remove('map-focused');
+        badge.innerHTML = '<span class="status-dot"></span><span class="status-text">Click Map to Zoom & Pan</span>';
       }
-    }, { passive: false });
+    });
+
+    // Mouse leave map card to automatically restore page scrolling
+    mapCard.addEventListener('mouseleave', () => {
+      leafletMap.scrollWheelZoom.disable();
+      mapCard.classList.remove('map-focused');
+      badge.innerHTML = '<span class="status-dot"></span><span class="status-text">Click Map to Zoom & Pan</span>';
+    });
 
     // Drop custom pin on map click
     leafletMap.on('click', async function(e) {
