@@ -270,15 +270,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
         mapMarker.on('dragend', async function() {
           const pos = mapMarker.getLatLng();
-          const customLocation = {
-            name: `Pin (${pos.lat.toFixed(3)}, ${pos.lng.toFixed(3)})`,
-            lat: pos.lat,
-            lon: pos.lng,
-            country: "Dragged Pin",
-            timezone: Math.round(pos.lng / 15)
+          const { lat, lng } = pos;
+          
+          let customLocation = {
+            name: `Loading address...`,
+            lat: lat,
+            lon: lng,
+            country: `Coords: ${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`,
+            timezone: Math.round(lng / 15)
           };
-          currentCity = customLocation;
+          
           await loadWeatherForCity(customLocation);
+          
+          const geo = await reverseGeocode(lat, lng);
+          if (geo) {
+            customLocation.name = geo.name;
+            customLocation.country = geo.country;
+          } else {
+            customLocation.name = `Pin Location`;
+            customLocation.country = `Coordinates: ${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`;
+          }
+          
+          currentCity = customLocation;
+          
+          if (currentWeatherData && currentWeatherData.lat === lat && currentWeatherData.lon === lng) {
+            document.getElementById("weather-city-name").textContent = customLocation.name;
+            document.getElementById("weather-country-name").textContent = customLocation.country;
+            if (mapMarker) {
+              const isImperial = api.settings.unit === 'imperial';
+              const tempUnit = isImperial ? '°F' : '°C';
+              mapMarker.setPopupContent(`<b>${customLocation.name}</b><br>${currentWeatherData.current.temp}${tempUnit}, ${currentWeatherData.current.description}`);
+            }
+          }
         });
       }
       mapMarker.openPopup();
@@ -303,6 +326,28 @@ document.addEventListener("DOMContentLoaded", () => {
       default: iconName = "cloud-sun";
     }
     return `<i data-lucide="${iconName}" class="${customClass}"></i>`;
+  }
+
+  async function reverseGeocode(lat, lon) {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=14`);
+      if (!response.ok) throw new Error("Reverse geocode request failed");
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const name = data.address.city || data.address.town || data.address.village || data.address.suburb || data.address.neighbourhood || data.address.county || "Custom Pin";
+        
+        let countryParts = [];
+        if (data.address.state) countryParts.push(data.address.state);
+        if (data.address.country) countryParts.push(data.address.country);
+        const country = countryParts.join(", ");
+        
+        return { name, country };
+      }
+    } catch (e) {
+      console.warn("Error reverse geocoding location coordinates", e);
+    }
+    return null;
   }
 
   // ==========================================================================
@@ -614,15 +659,37 @@ document.addEventListener("DOMContentLoaded", () => {
     // Drop custom pin on map click
     leafletMap.on('click', async function(e) {
       const { lat, lng } = e.latlng;
-      const customLocation = {
-        name: `Pin (${lat.toFixed(3)}, ${lng.toFixed(3)})`,
+      
+      let customLocation = {
+        name: `Loading address...`,
         lat: lat,
         lon: lng,
-        country: "Custom Pin",
-        timezone: Math.round(lng / 15) // Approximate timezone
+        country: `Coords: ${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`,
+        timezone: Math.round(lng / 15)
       };
-      currentCity = customLocation;
+
       await loadWeatherForCity(customLocation);
+
+      const geo = await reverseGeocode(lat, lng);
+      if (geo) {
+        customLocation.name = geo.name;
+        customLocation.country = geo.country;
+      } else {
+        customLocation.name = `Pin Location`;
+        customLocation.country = `Coordinates: ${lat.toFixed(3)}°N, ${lng.toFixed(3)}°E`;
+      }
+      
+      currentCity = customLocation;
+      
+      if (currentWeatherData && currentWeatherData.lat === lat && currentWeatherData.lon === lng) {
+        document.getElementById("weather-city-name").textContent = customLocation.name;
+        document.getElementById("weather-country-name").textContent = customLocation.country;
+        if (mapMarker) {
+          const isImperial = api.settings.unit === 'imperial';
+          const tempUnit = isImperial ? '°F' : '°C';
+          mapMarker.setPopupContent(`<b>${customLocation.name}</b><br>${currentWeatherData.current.temp}${tempUnit}, ${currentWeatherData.current.description}`);
+        }
+      }
     });
   }
 
